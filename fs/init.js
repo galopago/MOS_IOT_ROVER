@@ -20,21 +20,25 @@ let MOTOR_BR_PIN_B = 19;
 
 
 let PWM_UPDATE_TICK_MS=100;
+let CMD_UPDATE_TICK_MS=100;
 
 let RAMP_TIME_MS = 1000;
 let RAMP_STEPS = 10;
 
 
-let p_command = 'st';	// present command:	st=stop, fd=forward, bk=backward, rt=right turn, lt= left turn
-let s_command = 'st';	// set command
-let p_speed = 0;		// present speed:	0 to 100%
-let s_speed = 0;		// set speed
-let d_speed = 0;		// delta speed
+let p_command = JSON.stringify('st');	// present command:	st=stop, fd=forward, bk=backward, rt=right turn, lt= left turn
+let s_command = JSON.stringify('st');	// set command
+let speed = 0;			//	0 to 100%
+let p_speed = 0;		// present speed - used for ramp
+let s_speed = 0;		// set speed     - used for ramp
+let d_speed = 0;		// delta speed   - used for ramp
 let speed_change_flag = 0;
+let command_change_flag = 0;
 
-let topic_pwm = '/mosiotrover/pwm';
+
 let topic_frequency = '/mosiotrover/frequency';
 let topic_speed = '/mosiotrover/speed';
+let topic_command = '/mosiotrover/command';
 
 let pwm = 0;
 let frequency = 1000;
@@ -56,16 +60,6 @@ GPIO.setup_output(MOTOR_BR_PIN_B,0);
 
 
 // ************************************************
-// listen to MQTT server topic to pwm value
-// ************************************************
-
-MQTT.sub(topic_pwm,function(conn,topic,msg){
-	print('Topic:', topic, 'message:', msg);
-	pwm=JSON.parse(msg);
-},null);
-
-
-// ************************************************
 // listen to MQTT server topic to pwm frequency
 // ************************************************
 
@@ -75,23 +69,34 @@ MQTT.sub(topic_frequency,function(conn,topic,msg){
 },null);
 
 // ************************************************
-// listen to MQTT server topic to pwm speed
+// listen to MQTT server topic to speed
 // ************************************************
 
 MQTT.sub(topic_speed,function(conn,topic,msg){
 	print('Topic:', topic, 'message:', msg);
-	s_speed=JSON.parse(msg);
+	speed=JSON.parse(msg);
 
 	//truncating MAX and MIN speed values
-	if (s_speed > 100)
-		s_speed = 100;
+	if (speed > 100)
+		speed = 100;
 		
-	if (s_speed < 0)
-		s_speed = 0;
+	if (speed < 0)
+		speed = 0;
 		
 },null);
 
+// ************************************************
+// listen to MQTT server topic to command
+// ************************************************
 
+MQTT.sub(topic_command,function(conn,topic,msg){
+	print('s_command:', s_command,'p_command:', p_command);
+	print('Topic:', topic, 'message:', msg);
+	s_command=JSON.stringify(msg);
+	print('s_command:', s_command,'p_command:', p_command);
+	// sanity checks!
+		
+},null);
 // ************************************************
 // update PWM values to IO every  PWM_UPDATE_TICK_MS seconds
 // ************************************************
@@ -107,7 +112,7 @@ Timer.set(PWM_UPDATE_TICK_MS, Timer.REPEAT, function() {
 
 
 // ************************************************
-// Ramp calculator to change speed smoothly from actual value to set value
+// Ramp calculator to change speed smoothly (without changing command) from actual value to set value
 // ************************************************
 
 Timer.set(RAMP_TIME_MS/( RAMP_STEPS*2), Timer.REPEAT, function() {
@@ -146,8 +151,42 @@ Timer.set(RAMP_TIME_MS/( RAMP_STEPS*2), Timer.REPEAT, function() {
 						speed_change_flag = 0; 
 					}
 				}							
-			//print('p_speed:', p_speed, 's_speed:', s_speed);
+			print('p_speed:', p_speed, 's_speed:', s_speed);
+			print('p_command:', p_command,'s_command:', s_command,'command_change_flag',command_change_flag);			
 		}
 		
 }, null);
 
+// ************************************************
+// Command state machine
+// ************************************************
+
+Timer.set(CMD_UPDATE_TICK_MS, Timer.REPEAT, function() {
+	if (p_command !== s_command && command_change_flag === 0)
+		{
+			command_change_flag = 1;
+		}
+	
+	if( command_change_flag === 1 )
+	{
+		// from STOP to FORWARD
+		if (p_command ==="st" && s_command ==="fd")	
+		{
+			s_speed = speed;
+			p_command = s_command;
+			command_change_flag = 0;
+			print('FORWARD!');
+		}
+		// from FORWARD to STOP	
+		if (p_command ==="fd" && s_command ==="st")	
+		{
+			s_speed = 0;
+			p_command =s_command;
+			command_change_flag = 0;
+			print('STOP!');
+		}
+	print('p_command:', p_command,'s_command:', s_command,'command_change_flag',command_change_flag);
+	}
+	
+	
+}, null);
