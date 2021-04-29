@@ -26,9 +26,9 @@ let RAMP_TIME_MS = 1000;
 let RAMP_STEPS = 10;
 
 
-let p_command = JSON.stringify('st');	// present command:	st=stop, fd=forward, bk=backward, rt=right turn, lt= left turn
-let s_command = JSON.stringify('st');	// set command
+let p_command = 'st';	// present command:	st=stop, fd=forward, bk=backward, rt=right turn, lt= left turn
 let speed = 0;			//	0 to 100%
+let s_command = 'st';	// set command
 let p_speed = 0;		// present speed - used for ramp
 let s_speed = 0;		// set speed     - used for ramp
 let d_speed = 0;		// delta speed   - used for ramp
@@ -90,23 +90,27 @@ MQTT.sub(topic_speed,function(conn,topic,msg){
 // ************************************************
 
 MQTT.sub(topic_command,function(conn,topic,msg){
-	print('s_command:', s_command,'p_command:', p_command);
+	
 	print('Topic:', topic, 'message:', msg);
-	s_command=JSON.stringify(msg);
-	print('s_command:', s_command,'p_command:', p_command);
+	//print('msg.length', msg.length);
+	s_command=msg;	
+	//print('s_command:', s_command,'p_command:', p_command);
 	// sanity checks!
 		
 },null);
+
 // ************************************************
 // update PWM values to IO every  PWM_UPDATE_TICK_MS seconds
 // ************************************************
 
 Timer.set(PWM_UPDATE_TICK_MS, Timer.REPEAT, function() {
 	pwm = p_speed / 100.0;
-	PWM.set(MOTOR_FL_PIN_A,frequency,pwm);
-	PWM.set(MOTOR_BL_PIN_A,frequency,pwm);	
-	PWM.set(MOTOR_FR_PIN_A,frequency,pwm);	
-	PWM.set(MOTOR_BR_PIN_A,frequency,pwm);	
+	
+	PWM.set(MOTOR_FL_PIN_B,frequency,pwm);
+	PWM.set(MOTOR_BL_PIN_B,frequency,pwm);	
+	PWM.set(MOTOR_FR_PIN_B,frequency,pwm);	
+	PWM.set(MOTOR_BR_PIN_B,frequency,pwm);	
+	
 }, null);
 
 
@@ -150,9 +154,7 @@ Timer.set(RAMP_TIME_MS/( RAMP_STEPS*2), Timer.REPEAT, function() {
 						p_speed = s_speed;
 						speed_change_flag = 0; 
 					}
-				}							
-			print('p_speed:', p_speed, 's_speed:', s_speed);
-			print('p_command:', p_command,'s_command:', s_command,'command_change_flag',command_change_flag);			
+				}										
 		}
 		
 }, null);
@@ -170,23 +172,46 @@ Timer.set(CMD_UPDATE_TICK_MS, Timer.REPEAT, function() {
 	if( command_change_flag === 1 )
 	{
 		// from STOP to FORWARD
-		if (p_command ==="st" && s_command ==="fd")	
+		if (p_command ==='st' && s_command ==='fd')	
 		{
 			s_speed = speed;
-			p_command = s_command;
+			p_command = 'fd';
 			command_change_flag = 0;
 			print('FORWARD!');
 		}
 		// from FORWARD to STOP	
-		if (p_command ==="fd" && s_command ==="st")	
+		else if (p_command ==='fd' && s_command ==='st')	
 		{
 			s_speed = 0;
-			p_command =s_command;
+			p_command = 'st';
 			command_change_flag = 0;
 			print('STOP!');
 		}
-	print('p_command:', p_command,'s_command:', s_command,'command_change_flag',command_change_flag);
+		// from STOP to BACKWARD
+		else if (p_command ==='st' && s_command ==='bk')	
+		{
+			s_speed = speed;
+			p_command = 'bk';
+			command_change_flag = 0;
+			print('BACKWARD!');
+		}
+		// from BACKWARD to STOP	
+		else if (p_command ==='bk' && s_command ==='st')	
+		{
+			s_speed = 0;
+			p_command = 'st';
+			command_change_flag = 0;
+			print('STOP!');
+		}
+		else
+		{
+			print('UNKNOWN!:',s_command);
+			s_command = p_command;	
+			command_change_flag = 0;		
+		}
+		
+	//print('p_command:', p_command,'s_command:', s_command,'command_change_flag',command_change_flag);
 	}
-	
+		
 	
 }, null);
