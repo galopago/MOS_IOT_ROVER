@@ -2,5 +2,5 @@
   "arch": "esp32",
   "platform": "esp32",
   "app_name": "MOS_IOT_ROVER",
-  "build_time_ms": 67588
+  "build_time_ms": 462908
 }

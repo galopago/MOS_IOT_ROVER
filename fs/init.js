@@ -26,12 +26,13 @@ let RAMP_TIME_MS = 1000;
 let RAMP_STEPS = 10;
 
 
-let p_command = 'st';	// present command:	st=stop, fd=forward, bk=backward, rt=right turn, lt= left turn
-let speed = 0;			//	0 to 100%
-let s_command = 'st';	// set command
-let p_speed = 0;		// present speed - used for ramp
-let s_speed = 0;		// set speed     - used for ramp
-let d_speed = 0;		// delta speed   - used for ramp
+let p_command = 'st';			// present command:	st=stop, fd=forward, bk=backward, rt=right turn, lt= left turn
+let speed = 0;					//	0 to 100%
+let s_command = 'st';			// set command
+let beforestop_command = 'fd';	
+let p_speed = 0;				// present speed - used for ramp
+let s_speed = 0;				// set speed     - used for ramp
+let d_speed = 0;				// delta speed   - used for ramp
 let speed_change_flag = 0;
 let command_change_flag = 0;
 
@@ -106,11 +107,67 @@ MQTT.sub(topic_command,function(conn,topic,msg){
 Timer.set(PWM_UPDATE_TICK_MS, Timer.REPEAT, function() {
 	pwm = p_speed / 100.0;
 	
-	PWM.set(MOTOR_FL_PIN_B,frequency,pwm);
-	PWM.set(MOTOR_BL_PIN_B,frequency,pwm);	
-	PWM.set(MOTOR_FR_PIN_B,frequency,pwm);	
-	PWM.set(MOTOR_BR_PIN_B,frequency,pwm);	
-	
+	if ( p_command === 'fd' )
+		{
+			PWM.set(MOTOR_FL_PIN_B,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_B,frequency,pwm);	
+		}
+	else if ( p_command === 'bk' )
+		{
+			PWM.set(MOTOR_FL_PIN_A,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_A,frequency,pwm);	
+		}	
+	else if ( p_command === 'st'  && beforestop_command === 'fd' )
+		{
+			PWM.set(MOTOR_FL_PIN_B,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_B,frequency,pwm);	
+		}	
+	else if ( p_command === 'st'  && beforestop_command === 'bk' )
+		{
+			PWM.set(MOTOR_FL_PIN_A,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_A,frequency,pwm);	
+		}
+	else if ( p_command === 'rt' )
+		{
+			PWM.set(MOTOR_FL_PIN_B,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_A,frequency,pwm);	
+		}		
+	else if ( p_command === 'st' && beforestop_command === 'rt' )
+		{
+			PWM.set(MOTOR_FL_PIN_B,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_A,frequency,pwm);	
+		}			
+	else if ( p_command === 'lt' )
+		{
+			PWM.set(MOTOR_FL_PIN_A,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_B,frequency,pwm);	
+		}		
+	else if ( p_command === 'st' && beforestop_command === 'lt' )
+		{
+			PWM.set(MOTOR_FL_PIN_A,frequency,pwm);
+			PWM.set(MOTOR_BL_PIN_A,frequency,pwm);	
+			PWM.set(MOTOR_FR_PIN_B,frequency,pwm);	
+			PWM.set(MOTOR_BR_PIN_B,frequency,pwm);	
+		}			
+	else
+		{
+			print("PWM error, unknown command!");
+		}
+
 }, null);
 
 
@@ -184,8 +241,10 @@ Timer.set(CMD_UPDATE_TICK_MS, Timer.REPEAT, function() {
 		{
 			s_speed = 0;
 			p_command = 'st';
+			beforestop_command ='fd';
 			command_change_flag = 0;
 			print('STOP!');
+			print("beforestop_command:",beforestop_command);
 		}
 		// from STOP to BACKWARD
 		else if (p_command ==='st' && s_command ==='bk')	
@@ -193,15 +252,53 @@ Timer.set(CMD_UPDATE_TICK_MS, Timer.REPEAT, function() {
 			s_speed = speed;
 			p_command = 'bk';
 			command_change_flag = 0;
-			print('BACKWARD!');
+			print('BACKWARD!');			
 		}
 		// from BACKWARD to STOP	
 		else if (p_command ==='bk' && s_command ==='st')	
 		{
 			s_speed = 0;
 			p_command = 'st';
+			beforestop_command ='bk';			
 			command_change_flag = 0;
 			print('STOP!');
+			print("beforestop_command:",beforestop_command);
+		}
+		// from STOP to RIGHT TURN
+		else if (p_command ==='st' && s_command ==='rt')	
+		{
+			s_speed = speed;
+			p_command = 'rt';			
+			command_change_flag = 0;
+			print('RIGHT TURN!');	
+		}
+		// from RIGHT TURN to STOP
+		else if (p_command ==='rt' && s_command ==='st')	
+		{
+			s_speed = 0;
+			p_command = 'st';
+			beforestop_command ='rt';			
+			command_change_flag = 0;
+			print('STOP!');
+			print("beforestop_command:",beforestop_command);
+		}
+		// from STOP to LEFT TURN
+		else if (p_command ==='st' && s_command ==='lt')	
+		{
+			s_speed = speed;
+			p_command = 'lt';			
+			command_change_flag = 0;
+			print('LEFT TURN!');	
+		}
+		// from LEFT TURN to STOP
+		else if (p_command ==='lt' && s_command ==='st')	
+		{
+			s_speed = 0;
+			p_command = 'st';
+			beforestop_command ='lt';			
+			command_change_flag = 0;
+			print('STOP!');
+			print("beforestop_command:",beforestop_command);
 		}
 		else
 		{
