@@ -22,7 +22,7 @@ let MOTOR_BR_PIN_B = 19;
 let PWM_UPDATE_TICK_MS=100;
 let CMD_UPDATE_TICK_MS=100;
 
-let RAMP_TIME_MS = 1000;
+let RAMP_TIME_MS = 400;
 let RAMP_STEPS = 10;
 
 
@@ -42,7 +42,7 @@ let topic_speed = '/mosiotrover/speed';
 let topic_command = '/mosiotrover/command';
 
 let pwm = 0;
-let frequency = 1000;
+let frequency = 100;
 
 
 // GPIO init
