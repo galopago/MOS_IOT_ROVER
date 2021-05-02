@@ -2,5 +2,5 @@
   "arch": "esp32",
   "platform": "esp32",
   "app_name": "TRANSMITTER",
-  "build_time_ms": 73890
+  "build_time_ms": 73686
 }
