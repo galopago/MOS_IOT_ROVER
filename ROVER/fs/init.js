@@ -25,6 +25,14 @@ let MOTOR_FR_PIN_B = 17;
 let MOTOR_BR_PIN_A = 18;
 let MOTOR_BR_PIN_B = 19;
 
+// 1 servo motor for camera tilt
+let SERVO_PIN = 21;
+
+let SERVO_PWM_PERIOD = 0.02;
+let SERVO_PULSE_MAX = 0.002;
+let SERVO_PULSE_MIN = 0.001;
+let SERVO_PWM_FREQ = 1 / SERVO_PWM_PERIOD;
+
 
 let PWM_UPDATE_TICK_MS=100;
 let CMD_UPDATE_TICK_MS=100;
@@ -43,10 +51,12 @@ let d_speed = 0;					// delta speed   - used for ramp
 let speed_change_flag = 0;
 let command_change_flag = 0;
 
+let tilt_angle = 0;					// -90 to 90
 
 let topic_frequency = '/mosiotrover/frequency';
 let topic_speed = '/mosiotrover/speed';
 let topic_command = '/mosiotrover/command';
+let topic_tilt = '/mosiotrover/tilt';
 
 let pwm = 0;
 let frequency = 100;
@@ -65,6 +75,25 @@ GPIO.setup_output(MOTOR_FR_PIN_B,0);
 
 GPIO.setup_output(MOTOR_BR_PIN_A,0);
 GPIO.setup_output(MOTOR_BR_PIN_B,0);
+
+
+GPIO.setup_output(SERVO_PIN,0);
+
+// ************************************************
+// listen to MQTT server topic to tilt angle
+// ************************************************
+
+MQTT.sub(topic_tilt,function(conn,topic,msg){
+	print('Topic:', topic, 'message:', msg);
+	tilt_angle=JSON.parse(msg);
+
+	if(tilt_angle > 90)
+		tilt_angle = 90;
+	
+	if(tilt_angle < -90)
+		tilt_angle = -90;
+		
+},null);
 
 
 // ************************************************
@@ -197,6 +226,15 @@ Timer.set(PWM_UPDATE_TICK_MS, Timer.REPEAT, function() {
 			print("PWM error, unknown command!");
 		}
 
+	// *****************************************
+	// update servo tilt angle
+	// -90 	0.5 ms		2.5%		0.025
+	//   0 	1.5 ms		7.5%		0.075
+	//  90 	2.5 ms		12.5%		0.12
+	
+	let pwm_servo = 0.025 +( ((tilt_angle + 90)/180)* 0.1);
+	PWM.set(SERVO_PIN,SERVO_PWM_FREQ,pwm_servo);	
+		
 }, null);
 
 
