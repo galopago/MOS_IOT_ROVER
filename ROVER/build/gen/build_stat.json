@@ -2,5 +2,5 @@
   "arch": "esp32",
   "platform": "esp32",
   "app_name": "ROVER",
-  "build_time_ms": 66196
+  "build_time_ms": 53830
 }

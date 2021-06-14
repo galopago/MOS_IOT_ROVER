@@ -42,7 +42,7 @@ let RAMP_STEPS = 10;
 
 
 let p_command = CMD_ST;				// present command:	st=stop, fd=forward, bk=backward, rt=right turn, lt= left turn
-let speed = 0;						//	0 to 100%
+let speed = 100;						//	0 to 100%
 let s_command = CMD_ST;				// set command
 let beforestop_command = CMD_FD;	
 let p_speed = 0;					// present speed - used for ramp
